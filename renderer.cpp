@@ -512,3 +512,35 @@ void DX11Renderer::draw(const DrawCommand& command) {
     }
 }
 
+void DX11Renderer::drawElement(const std::string& name) {
+    auto it = elements.find(name);
+    if (it != elements.end()) {
+        for (const auto& command : it->second.commands) {
+            draw(command);
+        }
+    }
+}
+
+void DX11Renderer::clearElements() {
+    elements.clear();
+}
+
+void DX11Renderer::registerElement(const std::string& name, int priority, const std::vector<DrawCommand>& commands) {
+    elements[name] = Element(name, priority, commands);
+}
+
+void DX11Renderer::drawAllElements() {
+    std::vector<Element> sortedElements;
+    for (const auto& pair : elements) {
+        sortedElements.push_back(pair.second);
+    }
+    std::sort(sortedElements.begin(), sortedElements.end(), [](const Element& a, const Element& b) {
+        return a.priority > b.priority;
+    });
+
+    for (const auto& element : sortedElements) {
+        for (const auto& command : element.commands) {
+            draw(command);
+        }
+    }
+}

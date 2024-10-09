@@ -16,13 +16,13 @@
 
 using namespace DirectX;
 
-struct Vertex {
-    XMFLOAT3 position;
-    XMFLOAT4 color;
-};
 
 class DX11Renderer {
 public:
+    struct Vertex {
+        XMFLOAT3 position;
+        XMFLOAT4 color;
+    };
     struct Color {
         float r, g, b, a;
         Color(float red, float green, float blue, float alpha) : r(red), g(green), b(blue), a(alpha) {}
@@ -108,40 +108,15 @@ public:
             : name(name), priority(priority), commands(commands) {}
     };
 
-    void registerElement(const std::string& name, int priority, const std::vector<DrawCommand>& commands) {
-        elements[name] = Element(name, priority, commands);
-    }
-
-    void drawAllElements() {
-        std::vector<Element> sortedElements;
-        for (const auto& pair : elements) {
-            sortedElements.push_back(pair.second);
-        }
-        std::sort(sortedElements.begin(), sortedElements.end(), [](const Element& a, const Element& b) {
-            return a.priority > b.priority;
-        });
-
-        for (const auto& element : sortedElements) {
-            for (const auto& command : element.commands) {
-                draw(command);
-            }
-        }
-    }
-
-    void drawElement(const std::string& name) {
-        auto it = elements.find(name);
-        if (it != elements.end()) {
-            for (const auto& command : it->second.commands) {
-                draw(command);
-            }
-        }
-    }
-
-    void draw(const DrawCommand& command);
 
     DX11Renderer(HWND hwnd);
     ~DX11Renderer();
 
+    void registerElement(const std::string& name, int priority, const std::vector<DrawCommand>& commands);
+    void drawAllElements();
+    void drawElement(const std::string& name);
+    void clearElements();
+    void draw(const DrawCommand& command);
     void initD3D11();
     void clearScreen(float r, float g, float b, float a);
     void present();
