@@ -3,6 +3,7 @@
 #include <functional>
 #include <unordered_map>
 #include <chrono>
+#include <vector>
 
 #ifdef _DEBUG
 #define EZUI_DEBUG 1
@@ -12,7 +13,9 @@
 
 class ezUI {
 public:
-    ezUI(DX11Renderer& renderer) : renderer(renderer) {}
+    ezUI(DX11Renderer& renderer) : renderer(renderer) {
+        registerDefaultStyles();
+    }
 
     static void dbg(const std::string& message) {
 #if EZUI_DEBUG
@@ -20,87 +23,107 @@ public:
 #endif
     }
 
-    struct Button {
+    struct Style {
+        std::function<std::vector<DX11Renderer::DrawCommand>(const DX11Renderer::Rectangle&, DX11Renderer::Color)> createCommands;
+
+        Style() {}
+
+        Style(std::function<std::vector<DX11Renderer::DrawCommand>(const DX11Renderer::Rectangle&, DX11Renderer::Color)> createCommands)
+            : createCommands(createCommands) {}
+    };
+
+    struct Container {
         std::string name;
+        std::string styleName;
+        DX11Renderer::Rectangle bounds;
+        bool visible;
+        float paddingX;
+        float paddingY;
+        float maxWidth;
+        float maxHeight;
+        float currentHeight;
+        float currentWidth;
+
+        Container()
+            : name(""), styleName("defaultContainer"), bounds(0.0f, 0.0f, 100.0f, 100.0f, 0.0f, DX11Renderer::Color(0.0f, 0.0f, 0.0f, 1.0f)),
+            visible(false), paddingX(10.0f), paddingY(10.0f), maxWidth(500.0f), maxHeight(500.0f),
+            currentHeight(0.0f), currentWidth(0.0f) {}
+        Container(const std::string& name, float x, float y, float width, float height, DX11Renderer::Color color = DX11Renderer::Color(0.0f, 0.0f, 0.0f, 1.0f), const std::string& style = "defaultContainer", float paddingX = 10.0f, float paddingY = 10.0f, float maxWidth = 500.0f, float maxHeight = 500.0f)
+            : name(name), styleName(style), bounds(x, y, width, height, 0.0f, color), visible(false), paddingX(paddingX), paddingY(paddingY), maxWidth(maxWidth), maxHeight(maxHeight), currentHeight(0.0f), currentWidth(0.0f) {}
+    };
+
+    struct Button {
+        std::string containername;
+        std::string name;
+        std::string styleName;
         DX11Renderer::Rectangle bounds;
         std::function<void(Button&)> onClick;
         std::function<void(Button&)> onHover;
         std::function<void(Button&)> onIdle;
 
-        Button() : bounds(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, DX11Renderer::Color(0, 0, 0, 0)) {}
-        Button(const std::string& name, DX11Renderer::Rectangle bounds, std::function<void(Button&)> clickCallback, std::function<void(Button&)> hoverCallback, std::function<void(Button&)> idleCallback = nullptr)
-            : name(name), bounds(bounds), onClick(clickCallback), onHover(hoverCallback), onIdle(idleCallback) {}
-    };
+        Button()
+            : containername(""), styleName("defaultButton"), bounds(0.0f, 0.0f, 100.0f, 30.0f, 0.0f, DX11Renderer::Color(0, 0, 0, 0)),
+            onClick(nullptr), onHover(nullptr), onIdle(nullptr) {}
 
-    struct Slider {
-        std::string name;
-        DX11Renderer::Rectangle trackBounds;
-        DX11Renderer::Rectangle thumbBounds;
-        float minValue;
-        float maxValue;
-        float* value;
-        std::function<void(Slider&)> onValueChanged;
-        std::function<void(Slider&)> onIdle;
-
-        Slider() : trackBounds(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, DX11Renderer::Color(0, 0, 0, 0)), thumbBounds(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, DX11Renderer::Color(0, 0, 0, 0)), minValue(0), maxValue(0), value(nullptr), onIdle(nullptr) {}
-        Slider(const std::string& name, DX11Renderer::Rectangle trackBounds, DX11Renderer::Rectangle thumbBounds, float minValue, float maxValue, float* value, std::function<void(Slider&)> valueChangedCallback, std::function<void(Slider&)> idleCallback = nullptr)
-            : name(name), trackBounds(trackBounds), thumbBounds(thumbBounds), minValue(minValue), maxValue(maxValue), value(value), onValueChanged(valueChangedCallback), onIdle(idleCallback) {}
-    };
-
-    struct InputBox {
-        std::string name;
-        DX11Renderer::Rectangle bounds;
-        std::string text;
-        std::function<void(InputBox&)> onTextChanged;
-        std::function<void(InputBox&)> onIdle;
-
-        InputBox() : bounds(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, DX11Renderer::Color(0, 0, 0, 0)), onIdle(nullptr) {}
-        InputBox(const std::string& name, DX11Renderer::Rectangle bounds, const std::string& text, std::function<void(InputBox&)> textChangedCallback, std::function<void(InputBox&)> idleCallback = nullptr)
-            : name(name), bounds(bounds), text(text), onTextChanged(textChangedCallback), onIdle(idleCallback) {}
-    };
-
-    struct Checkbox {
-        std::string name;
-        DX11Renderer::Rectangle bounds;
-        bool checked;
-        std::function<void(Checkbox&)> onCheckedChanged;
-        std::function<void(Checkbox&)> onIdle;
-
-        Checkbox() : bounds(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, DX11Renderer::Color(0, 0, 0, 0)), checked(false), onIdle(nullptr) {}
-        Checkbox(const std::string& name, DX11Renderer::Rectangle bounds, bool initialValue, std::function<void(Checkbox&)> checkedChangedCallback, std::function<void(Checkbox&)> idleCallback = nullptr)
-            : name(name), bounds(bounds), checked(initialValue), onCheckedChanged(checkedChangedCallback), onIdle(idleCallback) {}
-    };
-
-    struct ColorPicker {
-        std::string name;
-        DX11Renderer::Rectangle bounds;
-        DX11Renderer::Color* selectedColor;
-        std::function<void(ColorPicker&)> onColorChanged;
-        std::function<void(ColorPicker&)> onIdle;
-
-        ColorPicker() : bounds(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, DX11Renderer::Color(0, 0, 0, 0)), selectedColor(nullptr), onIdle(nullptr) {}
-        ColorPicker(const std::string& name, DX11Renderer::Rectangle bounds, DX11Renderer::Color* selectedColor, std::function<void(ColorPicker&)> colorChangedCallback, std::function<void(ColorPicker&)> idleCallback = nullptr)
-            : name(name), bounds(bounds), selectedColor(selectedColor), onColorChanged(colorChangedCallback), onIdle(idleCallback) {}
+        Button(const std::string& containername, const std::string& name, DX11Renderer::Rectangle bounds, std::function<void(Button&)> clickCallback = nullptr, std::function<void(Button&)> hoverCallback = nullptr, std::function<void(Button&)> idleCallback = nullptr, const std::string& style = "defaultButton")
+            : containername(containername), name(name), styleName(style), bounds(bounds),
+            onClick(clickCallback), onHover(hoverCallback), onIdle(idleCallback) {}
     };
 
     struct Hotkey {
+        std::string containername;
         int virtualKey;
         std::function<void()> onKeyPress;
         std::chrono::time_point<std::chrono::steady_clock> lastUseTime;
         int rateLimitMs;
 
         Hotkey()
-            : virtualKey(0), onKeyPress(nullptr), lastUseTime(std::chrono::steady_clock::now()), rateLimitMs(250) {}
-        Hotkey(int vk, std::function<void()> callback, int rateLimitMs = 250)
-            : virtualKey(vk), onKeyPress(callback), lastUseTime(std::chrono::steady_clock::now()), rateLimitMs(rateLimitMs) {}
+            : containername(""), virtualKey(0), onKeyPress(nullptr), lastUseTime(std::chrono::steady_clock::now()), rateLimitMs(250) {}
+        Hotkey(const std::string& containername, int vk, std::function<void()> callback, int rateLimitMs = 250)
+            : containername(containername), virtualKey(vk), onKeyPress(callback), lastUseTime(std::chrono::steady_clock::now()), rateLimitMs(rateLimitMs) {}
     };
 
-    void addButton(const std::string& name, DX11Renderer::Rectangle bounds, std::function<void(Button&)> clickCallback, std::function<void(Button&)> hoverCallback, std::function<void(Button&)> idleCallback = nullptr) {
-        buttons[name] = Button(name, bounds, clickCallback, hoverCallback, idleCallback);
+    void registerStyle(const std::string& styleName, const Style& style) {
+        if (styles.find(styleName) != styles.end()) {
+            dbg("Style with name '" + styleName + "' already exists. Skipping registration.");
+            return;
+        }
+        styles[styleName] = style;
     }
 
-    void addHotkey(int virtualKey, std::function<void()> callback, int rateLimitMs = 250) {
-        hotkeys[virtualKey] = Hotkey(virtualKey, callback, rateLimitMs);
+    void addContainer(const std::string& name, float x, float y, float width, float height, DX11Renderer::Color color = DX11Renderer::Color(0.0f, 0.0f, 0.0f, 1.0f), const std::string& style = "defaultContainer", float paddingX = 10.0f, float paddingY = 10.0f, float maxWidth = 500.0f, float maxHeight = 500.0f) {
+        if (containers.find(name) != containers.end()) {
+            dbg("Container with name '" + name + "' already exists. Skipping addition.");
+            return;
+        }
+        containers[name] = Container(name, x, y, width, height, color, style, paddingX, paddingY, maxWidth, maxHeight);
+    }
+
+    void addButton(const std::string& containername, const std::string& name, DX11Renderer::Rectangle bounds, std::function<void(Button&)> clickCallback = nullptr, std::function<void(Button&)> hoverCallback = nullptr, std::function<void(Button&)> idleCallback = nullptr, const std::string& style = "defaultButton") {       
+        if (buttons.find(name) != buttons.end()) {
+            dbg("Button with name '" + name + "' already exists. Skipping addition.");
+            return;
+        }
+
+        auto containerIt = containers.find(containername);
+        if (containerIt == containers.end()) {
+            dbg("Container '" + containername + "' not found. Cannot add button.");
+            return;
+        }
+
+        Container& container = containerIt->second;
+        bounds.x += container.bounds.x;
+        bounds.y += container.bounds.y;
+        
+        buttons[name] = Button(containername, name, bounds, clickCallback, hoverCallback, idleCallback, style);
+    }
+
+    void addHotkey(const std::string& containername, int virtualKey, std::function<void()> callback, int rateLimitMs = 250) {
+        if (hotkeys.find(virtualKey) != hotkeys.end()) {
+            dbg("Hotkey with virtual key '" + std::to_string(virtualKey) + "' already exists. Skipping addition.");
+            return;
+        }
+        hotkeys[virtualKey] = Hotkey(containername, virtualKey, callback, rateLimitMs);
     }
 
     void handleInput() {
@@ -115,17 +138,19 @@ public:
 
         for (auto& buttonPair : buttons) {
             Button& button = buttonPair.second;
-            if (isMouseOver(button.bounds, mouseX, mouseY)) {
-                if (mouseLeftDown && elapsed.count() > 250) {
-                    lastClickTime = currentTime;
-                    if (button.onClick) button.onClick(button);
+            if (isContainerVisible(button.containername)) {
+                if (isMouseOver(button.bounds, mouseX, mouseY)) {
+                    if (mouseLeftDown && elapsed.count() > 250) {
+                        lastClickTime = currentTime;
+                        if (button.onClick) button.onClick(button);
+                    }
+                    else if (button.onHover) {
+                        button.onHover(button);
+                    }
                 }
-                else if (button.onHover) {
-                    button.onHover(button);
+                else if (button.onIdle) {
+                    button.onIdle(button);
                 }
-            }
-            else if (button.onIdle) {
-                button.onIdle(button);
             }
         }
 
@@ -141,46 +166,99 @@ public:
                 }
             }
         }
-
     }
 
     void drawAllElements() {
         renderer.clearScreen(0.0f, 0.0f, 0.0f, 0.0f);
 
         if (masterSwitch) {
+            // Draw containers
+            for (auto& containerPair : containers) {
+                Container& container = containerPair.second;
+                if (container.visible) {
+                    applyStyle(container.styleName, container.bounds, container.bounds.color);
+                }
+            }
+
+            // Draw buttons
             for (auto& buttonPair : buttons) {
                 Button& button = buttonPair.second;
-                renderer.draw(DX11Renderer::DrawCommand::CreateRectangle(button.bounds.x, button.bounds.y, button.bounds.width, button.bounds.height, 0.0f, button.bounds.color));
+                if (isContainerVisible(button.containername)) {
+                    applyStyle(button.styleName, button.bounds, button.bounds.color);
+                }
             }
         }
 
         renderer.present();
     }
 
+
     void masterToggle() {
-        if (masterSwitch) {
-            masterSwitch = false;
+        masterSwitch = !masterSwitch;
+    }
+
+    bool isContainerVisible(const std::string& containername) const {
+        if (!masterSwitch) return false;
+        auto containerIt = containers.find(containername);
+        if (containerIt != containers.end()) {
+            return containerIt->second.visible;
         }
         else {
-            masterSwitch = true;
+            dbg("Container not found: " + containername);
+        }
+        return false;
+    }
+
+    void toggleVisibility(const std::string& containername) {
+        auto containerIt = containers.find(containername);
+        if (containerIt != containers.end()) {
+            containerIt->second.visible = !containerIt->second.visible;
+        }
+        else {
+            dbg("Container not found: " + containername);
         }
     }
 
+    void registerDefaultStyles() {
+        registerStyle("defaultContainer", Style([](const DX11Renderer::Rectangle& bounds, DX11Renderer::Color accentColor) {
+            return std::vector<DX11Renderer::DrawCommand>{
+                DX11Renderer::DrawCommand::CreateRectangle(bounds.x, bounds.y, bounds.width, bounds.height, bounds.rounding, accentColor)
+            };
+        }));
+
+        registerStyle("defaultButton", Style([](const DX11Renderer::Rectangle& bounds, DX11Renderer::Color accentColor) {
+            return std::vector<DX11Renderer::DrawCommand>{
+                DX11Renderer::DrawCommand::CreateRectangle(bounds.x, bounds.y, bounds.width, bounds.height, bounds.rounding, accentColor)
+            };
+        }));
+    }
+
+
 private:
     DX11Renderer& renderer;
-
+    std::unordered_map<std::string, Container> containers;
     std::unordered_map<std::string, Button> buttons;
-    std::unordered_map<std::string, Slider> sliders;
-    std::unordered_map<std::string, InputBox> inputBoxes;
-    std::unordered_map<std::string, Checkbox> checkboxes;
-    std::unordered_map<std::string, ColorPicker> colorPickers;
     std::unordered_map<int, Hotkey> hotkeys;
+    std::unordered_map<std::string, Style> styles;
 
     std::chrono::time_point<std::chrono::steady_clock> lastClickTime;
-
     bool masterSwitch = true;
 
     bool isMouseOver(const DX11Renderer::Rectangle& bounds, int mouseX, int mouseY) {
         return mouseX >= bounds.x && mouseX <= (bounds.x + bounds.width) && mouseY >= bounds.y && mouseY <= (bounds.y + bounds.height);
     }
+
+    void applyStyle(const std::string& styleName, const DX11Renderer::Rectangle& bounds, const DX11Renderer::Color& accentColor) {
+        auto styleIt = styles.find(styleName);
+        if (styleIt != styles.end()) {
+            std::vector<DX11Renderer::DrawCommand> commands = styleIt->second.createCommands(bounds, accentColor);
+            for (const auto& command : commands) {
+                renderer.draw(command);
+            }
+        }
+        else {
+            dbg("Style not found: " + styleName);
+        }
+    }
+
 };

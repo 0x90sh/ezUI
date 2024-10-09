@@ -101,23 +101,28 @@ int main() {
 
 
     ezUI ui(renderer);
-    ui.addButton("TestButton", { 50.0f, 50.0f, 200.0f, 50.0f, 0.0f, DX11Renderer::Color(1.0f, 0.0f, 0.0f, 1.0f) },
+
+
+    ui.addContainer("A", 100.0f, 100.0f, 300.0f, 200.0f);
+    ui.toggleVisibility("A");
+
+    ui.addButton("A", "TestButton", { 0.0f, 0.0f, 100.0f, 30.0f, 0.0f, DX11Renderer::Color(1.0f, 0.0f, 0.0f, 1.0f) },
         [](ezUI::Button& button) {
-        PostQuitMessage(0);  // exit process, act like close button
+        PostQuitMessage(0);
     },
         [](ezUI::Button& button) {
-        button.bounds.color = DX11Renderer::Color(0.0f, 1.0f, 0.0f, 1.0f);  // change to green
+        button.bounds.color = DX11Renderer::Color(0.0f, 1.0f, 0.0f, 1.0f);
     },  [](ezUI::Button& button) {
-        button.bounds.color = DX11Renderer::Color(1.0f, 0.0f, 0.0f, 1.0f);  // change to red by default
+        button.bounds.color = DX11Renderer::Color(1.0f, 0.0f, 0.0f, 1.0f);
     }
     );
 
 
-    ui.addHotkey(VK_END, []() {
+    ui.addHotkey("A", VK_END, []() {
         PostQuitMessage(0);
     });
 
-    ui.addHotkey(VK_HOME, [&ui]() {
+    ui.addHotkey("A", VK_HOME, [&ui]() {
         ui.masterToggle();
     });
 
