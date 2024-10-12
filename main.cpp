@@ -6,7 +6,7 @@ using Color = DX11Renderer::Color;
 class WindowHijacker {
 public:
     HWND findWindow(const std::string& partialName);
-    HWND createWindow(const std::string& windowName, int width, int height, DWORD style = WS_POPUP | WS_VISIBLE | WS_EX_TOPMOST | WS_EX_LAYERED);
+    HWND createWindow(const std::string& windowName, int width, int height);
 
 private:
     struct SearchData {
@@ -47,7 +47,7 @@ std::string WindowHijacker::toLower(const std::string& str) {
     return result;
 }
 
-HWND WindowHijacker::createWindow(const std::string& windowName, int width, int height, DWORD style) {
+HWND WindowHijacker::createWindow(const std::string& windowName, int width, int height) {
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = DefWindowProc;
     wc.hInstance = GetModuleHandle(nullptr);
@@ -62,10 +62,10 @@ HWND WindowHijacker::createWindow(const std::string& windowName, int width, int 
     std::wstring wWindowName(windowName.begin(), windowName.end());
 
     HWND hwnd = CreateWindowEx(
-        0,
+        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT,
         wc.lpszClassName,
         wWindowName.c_str(),
-        style,
+        WS_POPUP | WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT, width, height,
         nullptr, nullptr, wc.hInstance, nullptr
     );
@@ -77,6 +77,8 @@ HWND WindowHijacker::createWindow(const std::string& windowName, int width, int 
 
     MARGINS margins = { -1 };
     DwmExtendFrameIntoClientArea(hwnd, &margins);
+
+    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
 
     ShowWindow(hwnd, SW_SHOW);
     UpdateWindow(hwnd);
@@ -103,17 +105,17 @@ int main() {
     ezUI ui(renderer);
 
 
-    ui.addContainer("A", 100.0f, 100.0f, 300.0f, 200.0f);
+    ui.addContainer("A", 100.0f, 100.0f, 250.0f, 350.0f);
     ui.toggleVisibility("A");
 
-    ui.addButton("A", "TestButton", { 0.0f, 0.0f, 100.0f, 30.0f, 0.0f, DX11Renderer::Color(1.0f, 0.0f, 0.0f, 1.0f) },
+    ui.addButton("A", "TestButton", { 210.0f, 330.0f, 40.0f, 20.0f, 0.0f, DX11Renderer::Color(.45f, 0.45f, 0.45f, 1.0f) },
         [](ezUI::Button& button) {
         PostQuitMessage(0);
     },
         [](ezUI::Button& button) {
-        button.bounds.color = DX11Renderer::Color(0.0f, 1.0f, 0.0f, 1.0f);
+        button.bounds.color = DX11Renderer::Color(.7f, 0.7f, 0.7f, 1.0f);
     },  [](ezUI::Button& button) {
-        button.bounds.color = DX11Renderer::Color(1.0f, 0.0f, 0.0f, 1.0f);
+        button.bounds.color = DX11Renderer::Color(.45f, 0.45f, 0.45f, 1.0f);
     }
     );
 

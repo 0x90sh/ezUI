@@ -544,3 +544,20 @@ void DX11Renderer::drawAllElements() {
         }
     }
 }
+
+void DX11Renderer::setWindowClickThrough(bool enable) {
+    LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+
+    if (enable) {
+        if (!(exStyle & WS_EX_TRANSPARENT)) {
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
+            SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+        }
+    }
+    else {
+        if (exStyle & WS_EX_TRANSPARENT) {
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT);
+            SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+        }
+    }
+}

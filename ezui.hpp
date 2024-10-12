@@ -131,6 +131,24 @@ public:
         GetCursorPos(&mousePos);
         int mouseX = mousePos.x;
         int mouseY = mousePos.y;
+
+        bool isHoveringAnyContainer = false;
+
+        for (auto& containerPair : containers) {
+            Container& container = containerPair.second;
+            if (isContainerVisible(container.name) && isMouseOver(container.bounds, mouseX, mouseY)) {
+                isHoveringAnyContainer = true;
+                break;
+            }
+        }
+
+        if (isHoveringAnyContainer) {
+            renderer.setWindowClickThrough(false);
+        }
+        else {
+            renderer.setWindowClickThrough(true);
+        }
+
         bool mouseLeftDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
 
         auto currentTime = std::chrono::steady_clock::now();
@@ -221,17 +239,41 @@ public:
 
     void registerDefaultStyles() {
         registerStyle("defaultContainer", Style([](const DX11Renderer::Rectangle& bounds, DX11Renderer::Color accentColor) {
+            DX11Renderer::Rectangle outerBounds = bounds;
+            outerBounds.width += 4;
+            outerBounds.height += 4;
+            outerBounds.x -= 2;
+            outerBounds.y -= 2;
+
+            DX11Renderer::Color borderColor(0.15f, 0.15f, 0.15f, 1.0f);
+            DX11Renderer::Color backgroundColor(0.2f, 0.2f, 0.2f, 1.0f);
+
             return std::vector<DX11Renderer::DrawCommand>{
-                DX11Renderer::DrawCommand::CreateRectangle(bounds.x, bounds.y, bounds.width, bounds.height, bounds.rounding, accentColor)
+                // border
+                DX11Renderer::DrawCommand::CreateRectangle(outerBounds.x, outerBounds.y, outerBounds.width, outerBounds.height, bounds.rounding + 2, borderColor),
+                // core container
+                DX11Renderer::DrawCommand::CreateRectangle(bounds.x, bounds.y, bounds.width, bounds.height, bounds.rounding, backgroundColor)
             };
         }));
 
         registerStyle("defaultButton", Style([](const DX11Renderer::Rectangle& bounds, DX11Renderer::Color accentColor) {
+            DX11Renderer::Color borderColor(0.15f, 0.15f, 0.15f, 1.0f);
+
+            DX11Renderer::Rectangle shadowBounds = bounds;
+            shadowBounds.x -= 2;
+            shadowBounds.y -= 2;
+            shadowBounds.width += 4;
+            shadowBounds.height += 4;
+
             return std::vector<DX11Renderer::DrawCommand>{
-                DX11Renderer::DrawCommand::CreateRectangle(bounds.x, bounds.y, bounds.width, bounds.height, bounds.rounding, accentColor)
+                //border
+                DX11Renderer::DrawCommand::CreateRectangle(shadowBounds.x, shadowBounds.y, shadowBounds.width, shadowBounds.height, bounds.rounding + 2, borderColor),
+                //button
+                DX11Renderer::DrawCommand::CreateRectangle(bounds.x, bounds.y, bounds.width, bounds.height, bounds.rounding, accentColor),
             };
         }));
     }
+
 
 
 private:

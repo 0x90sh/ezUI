@@ -124,6 +124,7 @@ public:
     void drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, const Color& color);
     void drawCircle(float centerX, float centerY, float radius, const Color& color, int segments = 64);
     void drawRoundedRectangle(float x, float y, float width, float height, float radius, const Color& color, int segments = 64);
+    void setWindowClickThrough(bool enable);
 
 private:
     HWND hwnd;
